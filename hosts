@@ -1,0 +1,33 @@
+# This is the default ansible 'hosts' file.
+#
+# It should live in /etc/ansible/hosts
+#
+#   - Comments begin with the '#' character
+#   - Blank lines are ignored
+#   - Groups of hosts are delimited by [header] elements
+#   - You can enter hostnames or ip addresses
+#   - A hostname/ip can be a member of multiple groups
+#
+
+AmazonLinux1-pr9 ansible_host=54.210.28.74
+AmazonLinux2-pr9 ansible_host=54.172.41.204
+Debian-pr9 ansible_host=100.26.47.210
+Ubuntu-pr9 ansible_host=54.159.46.179
+SUSE-pr9 ansible_host=34.228.68.20
+
+
+[WebServers]
+AmazonLinux1-pr9
+Debian-pr9
+Ubuntu-pr9
+SUSE-pr9
+
+[DNS_Maestro]
+AmazonLinux1-pr9
+
+[DNS_Esclavo]
+AmazonLinux2-pr9
+
+[Servidores_DNS:children]
+DNS_Maestro
+DNS_Esclavo

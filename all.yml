@@ -1,0 +1,49 @@
+#
+# KhalidCEU, 2025
+# File: /etc/ansible/group_vars/all.yml
+#
+
+# Fichero variables entorno Ansible
+
+ansible_user: ansible-user
+ansible_ssh_private_key_file: /home/ec2-user/ClavePracticaAnsible.pem
+ansible_python_interpreter: /usr/bin/python3
+
+# Variables config. Apache
+
+apache_conf_dirs:
+  RedHat: /etc/httpd/conf.d
+  Debian: /etc/apache2/sites-available
+  Suse: /etc/apache2/vhosts.d
+
+apache_docroots:
+  RedHat: /var/www/html
+  Debian: /var/www/html
+  Suse: /srv/www/htdocs
+
+apache_services:
+  RedHat: httpd
+  Debian: apache2
+  Suse: apache2
+
+apache_users:
+  RedHat: apache
+  Debian: www-data
+  Suse: wwwrun
+
+
+# Variables config Bind
+
+bind_conf:
+  RedHat:
+    bind_pckg: bind
+    bind_group: named
+    etc_dir: /etc
+    conf_directory: /etc/named
+    conf_file: "named.conf"
+    options_file: named.conf.options
+
+    zone_file: "{{ zona }}.zone"
+    zone_dir: "/var/named"
+    master_zone_filepath: "/var/named/{{ zona }}.hosts"
+    slave_zone_filepath: "/var/named/slaves/{{ zona }}.hosts"
