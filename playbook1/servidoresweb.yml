@@ -1,0 +1,83 @@
+---
+- name: Instalar Apache y habilitar servicio
+  hosts: WebServers
+  become: true
+  vars:
+    apache_service: "{{ apache_services[ansible_os_family] }}"
+  tasks:
+
+    - name: Actualizar el índice de paquetes en Debian/Ubuntu
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Instalar Apache
+      ansible.builtin.package:
+        name: "{{ apache_service }}"
+        state: latest
+
+    - name: Habilitar servicio apache
+      ansible.builtin.service:
+        name: "{{ apache_service }}"
+        enabled: yes
+        state: started
+
+- name: Configurar VirtualHost
+  hosts: WebServers
+  become: true
+  vars:
+    apache_conf_dir: "{{ apache_conf_dirs[ansible_os_family] }}"
+    apache_user: "{{ apache_users[ansible_os_family] }}"
+    apache_service: "{{ apache_services[ansible_os_family] }}"
+    apache_docroot: "{{ apache_docroots[ansible_os_family] }}/{{ dominio }}"
+    apache_pagedest: "{{ apache_docroot }}/index.html"
+  tasks:
+    - name: Crear directorio del proyecto web
+      ansible.builtin.file:
+        path: "{{ apache_docroot }}"
+        state: directory
+        owner: "{{ apache_user }}"
+        group: "{{ apache_user }}"
+        mode: '0755'
+
+    - name: Crear pagina de inicio personalizada
+      ansible.builtin.copy:
+        dest: "{{ apache_pagedest }}"
+        content: "Pagina de inicio del dominio {{ dominio }}\n"
+        owner: "{{ apache_user }}"
+        group: "{{ apache_user }}"
+        mode: '0644'
+
+    - name: Crear archivo de configuración del VirtualHost
+      ansible.builtin.template:
+        src: "templates/vhost.conf.j2"
+        dest: "{{ apache_conf_dir }}/{{ dominio }}.conf"
+        mode: '0644'
+      notify: Reiniciar Apache
+
+    - name: Habilitar el nuevo sitio en Debian/Ubuntu
+      ansible.builtin.shell: "a2ensite {{ dominio }}.conf"
+      args:
+        warn: false
+      when: ansible_os_family == 'Debian'
+      notify: Reiniciar Apache
+
+    - name: Deshabilitar el sitio por defecto en Debian/Ubuntu
+      ansible.builtin.shell: "a2dissite 000-default.conf"
+      args:
+        warn: false
+      when: ansible_os_family == 'Debian'
+      notify: Reiniciar Apache
+
+    - name: Deshabilitar página por defecto en Amazon Linux
+      ansible.builtin.file:
+        path: /etc/httpd/conf.d/welcome.conf
+        state: absent
+      when: ansible_os_family == 'RedHat'
+      notify: Reiniciar Apache
+
+  handlers:
+    - name: Reiniciar Apache
+      ansible.builtin.service:
+        name:  "{{ apache_service }}"
+        state: restarted

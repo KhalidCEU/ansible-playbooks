@@ -1,0 +1,6 @@
+zone "{{ zona }}" {
+    type slave;
+    file "{{ bind_vars.slave_zone_filepath }}";
+    masters { {{ ns1_ip }}; };
+    notify yes;
+};

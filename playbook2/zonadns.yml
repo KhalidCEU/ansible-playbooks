@@ -1,0 +1,68 @@
+---
+- name: Instalar y configurar Bind Maestro y Esclavo
+  hosts: DNS_Maestro:DNS_Esclavo
+  become: true
+  vars:
+    bind_vars: "{{ bind_conf[ansible_os_family] }}"
+
+    zona: "{{ zona }}"          # Nombre zona
+    ns1: "ns1.{{ zona }}"       # Nombre ns1
+    ns2: "ns2.{{ zona }}"       # Nombre ns2
+    ns1_ip: "{{ hostvars[groups['DNS_Maestro'][0]].ansible_host }}"
+    ns2_ip: "{{ hostvars[groups['DNS_Esclavo'][0]].ansible_host }}"
+    web_ip: "10.10.10.10"
+    allow_query: "any"          # Cualquier origen
+    listen_on: "any"            # Escucha en cualquier interfaz
+    bind_recursion: "no"        # Recursion desactivado
+
+  tasks:
+    - name: Instalar bind
+      ansible.builtin.package:
+        name: "{{ bind_vars.bind_pckg }}"
+        state: present
+
+    - name: Copiar named.conf.local (añadir fichero de zona)
+      ansible.builtin.template:
+        src: "named.conf.local.{{ 'master' if 'DNS_Maestro' in group_names else 'slave' }}.j2"
+        dest: "{{ bind_vars.conf_directory }}/zones.conf.local"
+        owner: root
+        group: "{{ bind_vars.bind_group }}"
+        mode: '0644'
+
+    - name: Permitir que BIND escuche en todas las interfaces IPv4
+      ansible.builtin.replace:
+        path: /etc/named.conf
+        regexp: '^(\s*)listen-on port 53 {[^}]*};'
+        replace: '\1listen-on port 53 { any; };'
+        backup: yes
+      notify: Reiniciar Bind
+
+    - name: Permitir consultas DNS desde cualquier origen (allow-query)
+      ansible.builtin.replace:
+        path: /etc/named.conf
+        regexp: '^(\s*)allow-query\s*{[^}]*};'
+        replace: '\1allow-query { any; };'
+        backup: yes
+      notify: Reiniciar Bind
+
+    - name: Modificar recursion en named.conf.options
+      replace:
+        path: /etc/named.conf
+        regexp: '^(\s*)recursion\s+yes;'
+        replace: '\1recursion no;'
+
+    - name: Copiar zona directa (en maestra)
+      ansible.builtin.template:
+        src: zona.db.j2
+        dest: "{{ bind_conf[ansible_os_family].master_zone_filepath }}"
+        owner: root
+        group: "{{ bind_vars.bind_group }}"
+        mode: '0644'
+      when: "'DNS_Maestro' in group_names"
+      notify: Reiniciar Bind
+
+  handlers:
+    - name: Reiniciar Bind
+      ansible.builtin.service:
+        name: named
+        state: restarted

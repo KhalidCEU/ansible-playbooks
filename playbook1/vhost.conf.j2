@@ -1,0 +1,10 @@
+<VirtualHost *:80>
+    ServerName {{ dominio }}
+    DocumentRoot {{ apache_docroots[ansible_os_family] }}/{{ dominio }}
+
+    <Directory {{ apache_docroots[ansible_os_family] }}/{{ dominio }}>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>

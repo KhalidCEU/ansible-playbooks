@@ -1,0 +1,6 @@
+zone "{{ zona }}" {
+    type master;
+    file "{{ bind_vars.master_zone_filepath }}";
+    allow-transfer { {{ ns2_ip }}; };
+    notify yes;
+};
